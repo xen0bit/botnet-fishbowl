@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math/rand"
@@ -42,7 +43,7 @@ func (w *World) init(maxLiveCells int) {
 	for i := 0; i < maxLiveCells; i++ {
 		x := rand.Intn(w.width)
 		y := rand.Intn(w.height)
-		w.area[y*w.width+x] = false
+		w.area[y*w.width+x] = true
 	}
 }
 
@@ -157,19 +158,22 @@ func (w *World) listenForBots() {
 
 func (w *World) handleRequest(conn net.Conn) {
 	// Make a buffer to hold incoming data.
-	buf := make([]byte, 10)
+	buf := make([]byte, 8)
 	// Read the incoming connection into the buffer.
 	_, err := conn.Read(buf)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 	}
 	// Send a response back to person contacting us.
-	conn.Write([]byte("Message received."))
+	conn.Write([]byte("Message received. Thanks for the entertainment"))
 	// Close the connection when you're done with it.
 	conn.Close()
-	//w.area[y*w.width+x] = true
-	for i, _ := range buf {
-		w.area[i*w.width+100] = true
+
+	rand.Seed(int64(binary.LittleEndian.Uint64(buf)))
+	for i := 0; i < int((screenWidth*screenHeight)/100); i++ {
+		x := rand.Intn(w.width)
+		y := rand.Intn(w.height)
+		w.area[y*w.width+x] = true
 	}
 
 }
@@ -208,9 +212,9 @@ func main() {
 		world: NewWorld(screenWidth, screenHeight, int((screenWidth*screenHeight)/10)),
 	}
 
-	//ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
 	ebiten.SetFullscreen(true)
-	ebiten.SetWindowTitle("Game of Life (Ebiten Demo)")
+	//ebiten.SetWindowTitle("Game of Life (Ebiten Demo)")
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
