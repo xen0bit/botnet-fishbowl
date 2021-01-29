@@ -1,11 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
+	"net"
+	"os"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+)
+
+var (
+	globalConn net.Listener
 )
 
 func init() {
@@ -35,7 +42,7 @@ func (w *World) init(maxLiveCells int) {
 	for i := 0; i < maxLiveCells; i++ {
 		x := rand.Intn(w.width)
 		y := rand.Intn(w.height)
-		w.area[y*w.width+x] = true
+		w.area[y*w.width+x] = false
 	}
 }
 
@@ -128,6 +135,10 @@ func neighbourCount(a []bool, width, height, x, y int) int {
 const (
 	screenWidth  = 320
 	screenHeight = 240
+
+	connHost = "localhost"
+	connPort = "6666"
+	connType = "tcp"
 )
 
 type Game struct {
@@ -135,7 +146,37 @@ type Game struct {
 	pixels []byte
 }
 
+func (w *World) listenForBots() {
+	conn, err := globalConn.Accept()
+	if err != nil {
+		fmt.Println("Error accepting: ", err.Error())
+	}
+	// Handle connections in a new goroutine.
+	go w.handleRequest(conn)
+}
+
+func (w *World) handleRequest(conn net.Conn) {
+	// Make a buffer to hold incoming data.
+	buf := make([]byte, 10)
+	// Read the incoming connection into the buffer.
+	_, err := conn.Read(buf)
+	if err != nil {
+		fmt.Println("Error reading:", err.Error())
+	}
+	// Send a response back to person contacting us.
+	conn.Write([]byte("Message received."))
+	// Close the connection when you're done with it.
+	conn.Close()
+	//w.area[y*w.width+x] = true
+	for i, _ := range buf {
+		w.area[i*w.width+100] = true
+	}
+
+}
+
 func (g *Game) Update() error {
+	// Listen for an incoming connection.
+	go g.world.listenForBots()
 	g.world.Update()
 	return nil
 }
@@ -153,13 +194,22 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func main() {
+	// Listen for incoming connections.
+	l, lerr := net.Listen(connType, connHost+":"+connPort)
+	if lerr != nil {
+		fmt.Println("Error listening:", lerr.Error())
+		os.Exit(1)
+	}
+	// Close the listener when the application closes.
+	defer l.Close()
+	globalConn = l
 
 	g := &Game{
 		world: NewWorld(screenWidth, screenHeight, int((screenWidth*screenHeight)/10)),
 	}
 
-	//ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
-	ebiten.SetFullscreen(true)
+	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	//ebiten.SetFullscreen(true)
 	ebiten.SetWindowTitle("Game of Life (Ebiten Demo)")
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
