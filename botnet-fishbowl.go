@@ -153,11 +153,13 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func main() {
+
 	g := &Game{
 		world: NewWorld(screenWidth, screenHeight, int((screenWidth*screenHeight)/10)),
 	}
 
-	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	//ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	ebiten.SetFullscreen(true)
 	ebiten.SetWindowTitle("Game of Life (Ebiten Demo)")
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
