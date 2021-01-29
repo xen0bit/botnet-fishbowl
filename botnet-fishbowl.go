@@ -136,7 +136,7 @@ const (
 	screenWidth  = 320
 	screenHeight = 240
 
-	connHost = "localhost"
+	connHost = "0.0.0.0"
 	connPort = "6666"
 	connType = "tcp"
 )
@@ -208,8 +208,8 @@ func main() {
 		world: NewWorld(screenWidth, screenHeight, int((screenWidth*screenHeight)/10)),
 	}
 
-	ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
-	//ebiten.SetFullscreen(true)
+	//ebiten.SetWindowSize(screenWidth*2, screenHeight*2)
+	ebiten.SetFullscreen(true)
 	ebiten.SetWindowTitle("Game of Life (Ebiten Demo)")
 	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
