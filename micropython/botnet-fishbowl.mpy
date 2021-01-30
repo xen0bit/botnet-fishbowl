@@ -1,0 +1,127 @@
+from m5stack import *
+from m5ui import *
+from uiflow import *
+import usocket as socket
+import network, machine
+import wifiCfg
+from random import randint
+
+lcd.clear()
+
+wlan_sta = network.WLAN(network.STA_IF); 
+
+#Initialise the screen
+#Block size controls pretty much all math beneath it. Smaller numbers may result in OOM errors
+block_size = 5
+xmax = int(320/block_size) #Width of screen in pixels
+ymax = int(240/block_size) #Height of screen in pixels
+
+def evolve_cell(alive, neighbours):
+    return neighbours == 3 or (alive and neighbours == 2)
+
+def count_neighbours(grid, position):
+    x,y = position
+    neighbour_cells = [(x - 1, y - 1), (x - 1, y + 0), (x - 1, y + 1),
+                       (x + 0, y - 1),                 (x + 0, y + 1),
+                       (x + 1, y - 1), (x + 1, y + 0), (x + 1, y + 1)]
+    count = 0
+    for x,y in neighbour_cells:
+        if x >= 0 and y >= 0:
+            try:
+                count += grid[x][y]
+            except:
+                pass
+    return count
+
+def make_empty_grid(x, y):
+    grid = []
+    for r in range(x):
+        row = []
+        for c in range(y):
+            row.append(0)
+        grid.append(row)
+    return grid
+
+def make_random_grid(x, y):
+        grid = []
+        for r in range(x):
+            row = []
+            for c in range(y):
+                temp = randint(0,100)
+                if(temp < 10):
+                    row.append(1)
+                else:
+                    row.append(0)
+                #row.append(randint(0,1))
+            grid.append(row)
+        return grid
+
+def evolve(grid):
+    x = len(grid)
+    y = len(grid[0])
+    new_grid = make_empty_grid(x, y)
+    for r in range(x):
+        for c in range(y):
+            cell = grid[r][c]
+            neighbours = count_neighbours(grid, (r, c))
+            new_grid[r][c] = 1 if evolve_cell(cell, neighbours) else 0
+    return new_grid
+
+alive_color = 0x00FF00
+BLACK = 0x000000
+
+def drawRect(x1, y1, x2, y2, color):
+    for x in range(x1, x2):
+        for y in range(y1, y2):
+            lcd.pixel(x, y, color)
+
+
+def draw_block(x, y, color):
+    x *= block_size
+    y *= block_size
+    #print(center_point)
+    #lcd.fill(color)
+    #lcd.rect(x-block_size, y-block_size, x, y, color=color, fillcolor=color)
+    #lcd.pixel(x, y, color)
+    drawRect(x-block_size, y-block_size, x, y, color)
+
+
+def main():
+    wifiCfg.doConnect('Wifi SSID', 'Wifi Password')
+    wifiCfg.autoConnect(lcdShow=True)
+    if wlan_sta.isconnected():
+		lcd.println("Connected! \r\nNetwork config:\r\n"+wlan_sta.ifconfig()[0]+', '+wlan_sta.ifconfig()[3])
+    addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+    #serversocket.bind(addr, 80))
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.bind(addr)
+    serversocket.listen(5)
+    lcd.println('listening on'+str(addr))
+    # while 1:
+    #     #accept connections from outside
+    #     (clientsocket, address) = serversocket.accept()
+    #     data = clientsocket.recv(1024)
+    #     clientsocket.close()
+    #     lcd.clear()
+    #     for i in data:
+    #         lcd.println(data)
+    
+    cell_number = 0
+    world = make_random_grid(xmax, ymax)
+    lcd.set_bg(BLACK)
+    while True:
+        #for i in range(200):
+        for x in range(xmax):
+            for y in range(ymax):
+                alive = world[x][y]
+                cell_number += 1
+                #cell_color = alive_color if alive else BLACK
+                if alive:
+                    draw_block(x, y, alive_color)
+                    #_thread.start_new_thread(draw_block, (x, y, alive_color))
+        world = evolve(world)
+        lcd.clear()
+        cell_number = 0
+            #sleep(0.1)
+
+main()
